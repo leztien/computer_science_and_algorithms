@@ -47,10 +47,10 @@ def edit_distance_recursive(str1, str2):
         
         #if last letters are different 
         else:
-            sub_cost = 1 + recurse(m-1, n-1)
-            del_cost = 1 + recurse(m-1, n)
-            ins_cost = 1 + recurse(m, n-1)
-            ans = min(sub_cost, del_cost, ins_cost)
+            sub_cost = recurse(m-1, n-1)
+            del_cost = recurse(m-1, n)
+            ins_cost = recurse(m, n-1)
+            ans = 1 + min(sub_cost, del_cost, ins_cost)
         
         #update the cache
         cache[(m,n)] = ans
@@ -74,4 +74,3 @@ print(d)
 
 d = edit_distance_recursive(str1, str2)
 print(d)
-
