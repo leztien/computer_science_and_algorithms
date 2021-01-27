@@ -2,75 +2,160 @@
 Edit Distance Algorithms
 """
 
+
+from string import ascii_lowercase as l
+from random import randint
+
+def make_strings(maxlen=15):
+    """makes a string, returns the original and a mangled one"""
+    s1 = [l[randint(0,25)] for _ in range(randint(3, maxlen))]
+    s2 = s1.copy()
+    n = len(s1)
+    for _ in range(randint(0, n)):
+        ix = randint(0,n-1)
+        op = randint(1,3)
+        if op == 1:
+            del s2[ix]
+        elif op == 2:
+            s2[ix:ix] = l[randint(0,25)]
+        else:
+            s2[ix] = l[randint(0,25)]
+        n = len(s2)
+    
+    s1,s2 = (str.join('', l) for l in (s1,s2))
+    return s1,s2
+
+
+
+
 import numpy as np
 
-
-def edit_distance(str1, str2):
-    """Tabular Edit Distance"""
-    m,n = len(str1), len(str2)
-    table = np.zeros(shape=(m+1, n+1), dtype=np.uint8)
+def edit_distance_tabular(s1, s2, replacement_cost=2):
+    """edit distance with dinamic programming (second fastest here)"""
+    m = len(s2)
+    n = len(s1)
     
-    table[0] = range(n+1)
-    table[:,0] = range(m+1)
+    D = np.zeros(shape=(m+1, n+1), dtype=np.uint16)
+    D[:,0] = range(m+1)
+    D[0,:] = range(n+1)
     
+    # Fill in the table
     for i in range(1, m+1):
         for j in range(1, n+1):
-            if str1[i-1] == str2[j-1]:
-                table[i,j] = table[i-1, j-1]
-            else:
-                table[i,j] = 1 + min(table[i-1, j-1], table[i-1, j], table[i, j-1])
-    return table[-1,-1]
+            D[i,j] = min(D[i-1, j-1] + (0 if s1[j-1] == s2[i-1] else replacement_cost), 
+                         D[i-1, j] + 1,
+                         D[i, j-1] + 1)
+    return D[m,n]
 
 
 
 
-def edit_distance_recursive(str1, str2):
-    """Recursive Edit Distance (with memoization)"""
-    recursive_counter = 0
+import inspect
+
+def edit_distance_recursive_naive(s1, s2, replacement_cost=2):
+    """innefficient algorithm which explores all paths"""
+    # Get this function
+    f = globals().get(inspect.stack()[0].function)
+    
+    # Base case
+    if len(s1) == 0:
+        return len(s2)
+    if len(s2) == 0:
+        return len(s1)
+    
+    # Recursive case
+    return min(
+    f(s1[:-1], s2[:-1], replacement_cost=replacement_cost) + (0 if s1[-1] == s2[-1] else replacement_cost),
+    f(s1[:-1], s2, replacement_cost=replacement_cost) + 1,
+    f(s1, s2[:-1], replacement_cost=replacement_cost) + 1
+    )
+    
+
+
+def edit_distance_recursive_improved(s1, s2, replacement_cost=2):
+    """redices redundancy"""
+    # Get this function
+    f = globals().get(inspect.stack()[0].function)
+        
+    # Base case
+    if len(s1) == 0:
+        return len(s2)
+    if len(s2) == 0:
+        return len(s1)
+    
+    # recursive cases
+    if s1[-1] == s2[-1]:
+        return f(s1[:-1], s2[:-1], replacement_cost=replacement_cost)
+     
+    return min(
+    f(s1[:-1], s2[:-1], replacement_cost=replacement_cost) + replacement_cost,
+    f(s1[:-1], s2, replacement_cost=replacement_cost) + 1,
+    f(s1, s2[:-1], replacement_cost=replacement_cost) + 1
+    )
+    
+
+
+def edit_distance_recursive_cached(s1, s2, replacement_cost=2):
+    """Stanford's Percy Liang (the fastest)"""
+    
+    # Cache for memoization
     cache = dict()
     
-    def recurse(m,n):
-        #counter
-        nonlocal recursive_counter
-        recursive_counter += 1
+    # Inner recursive function
+    def recurse(i, j, replacement_cost=2):
+        # If cached - retrun from chache
+        if (i,j) in cache: return cache[(i,j)]
         
-        #return form cache (comment the next line out and compare the number of recursions)
-        if (m,n) in cache: return cache[(m,n)]  
+        # Base case
+        if i == 0: return j
+        if j == 0: return i
         
-        #base cases
-        if m==0: return n
-        elif n==0: return m
-        
-        #if last letters are the same
-        elif str1[m-1] == str2[n-1]:
-            ans = recurse(m-1, n-1)
-        
-        #if last letters are different 
+        # If last letters are the same
+        if s2[i-1] == s1[j-1]:
+            ans = recurse(i-1, j-1, replacement_cost=replacement_cost)
+            
+        # If last letters differ
         else:
-            sub_cost = recurse(m-1, n-1)
-            del_cost = recurse(m-1, n)
-            ins_cost = recurse(m, n-1)
-            ans = 1 + min(sub_cost, del_cost, ins_cost)
+            sub_cost = recurse(i-1, j-1, replacement_cost=replacement_cost) + replacement_cost   # substitution cost
+            ins_cost = recurse(i-1, j, replacement_cost=replacement_cost) + 1   # insertion cost
+            del_cost = recurse(i, j-1, replacement_cost=replacement_cost) + 1   # deletion cost
+            ans = min(sub_cost, ins_cost, del_cost)
         
-        #update the cache
-        cache[(m,n)] = ans
+        # Cache and return
+        cache[(i,j)] = ans
         return ans
+    return recurse(len(s2), len(s1))
+
+
+#####################################################################################
+
+
+def main():
+    import time
     
-    #print out the number of recursions
-    result = recurse(len(str1), len(str2))
-    print("number of recursions", recursive_counter)
-    return result
+    s1,s2 = make_strings(maxlen=5)
+    
+    replacement_cost = 2
+    
+    t1 = time.process_time()
+    d1 = edit_distance_tabular(s1, s2, replacement_cost=replacement_cost)
+    t1 = time.process_time() - t1
+    
+    t2 = time.process_time()
+    d2 = edit_distance_recursive_naive(s1, s2, replacement_cost=replacement_cost)
+    t2 = time.process_time() - t2
+    
+    t3 = time.process_time()
+    d3 = edit_distance_recursive_improved(s1, s2, replacement_cost=replacement_cost)
+    t3 = time.process_time() - t3
+    
+    t4 = time.process_time()
+    d4 = edit_distance_recursive_cached(s1, s2, replacement_cost=replacement_cost)
+    t4 = time.process_time() - t4
+    
+    print(s1,s2, d4, [round(n,5) for n in   (t1,t2,t3,t4)])
+    assert d1==d2==d3==d4
+    
+if __name__ == "__main__": main()
 
-###############################################################################
-# Test the two algorithms
 
-
-str1 = "abcdef"
-str2 = "XabcXfedX"
-
-
-d = edit_distance(str1, str2)
-print(d)
-
-d = edit_distance_recursive(str1, str2)
-print(d)
