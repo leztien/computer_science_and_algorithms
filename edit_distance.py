@@ -128,6 +128,15 @@ def edit_distance_recursive_cached(s1, s2, replacement_cost=2):
 
 
 
+
+def similarity_ratio(s1, s2):
+    """Levenshtein similarity ratio"""
+    d = edit_distance_recursive_cached(s1, s2, replacement_cost=2)  # must be 2 here !!!
+    return (len(s1) + len(s2) - d) / (len(s1) + len(s2))
+
+
+
+
 def get_suggestions(word, vocabulary=None, min_distance=1, replacement_cost = 1):
     vocabulary = vocabulary or globals().get('vocabulary')
     
@@ -177,6 +186,11 @@ def main():
     assert d1==d2==d3==d4
     
     
+    # Levenshtein ratio
+    r = similarity_ratio(s1, s2)
+    print(s1, s2, r)
+    
+    
     # Spellchecking suggestions
     import os
     PATH = os.path.expanduser("~/Datasets/1000_common_english_words.txt")
@@ -189,4 +203,11 @@ def main():
         print(word, get_suggestions(word, vocabulary))
     
 if __name__ == "__main__": main()
+
+
+
+"""
+read on fuzzy mathing here:
+https://www.datacamp.com/community/tutorials/fuzzy-string-python
+"""
 
