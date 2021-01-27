@@ -124,8 +124,27 @@ def edit_distance_recursive_cached(s1, s2, replacement_cost=2):
         # Cache and return
         cache[(i,j)] = ans
         return ans
-    return recurse(len(s2), len(s1))
+    return recurse(len(s2), len(s1), replacement_cost=replacement_cost)
 
+
+
+def get_suggestions(word, vocabulary=None, min_distance=1, replacement_cost = 1):
+    vocabulary = vocabulary or globals().get('vocabulary')
+    
+    def condition(word, voc):
+        return (
+        word[0] == voc[0] and
+        word != voc
+        )
+    
+    distances = [0,] * len(vocabulary)
+    
+    for i,s in enumerate(vocabulary):
+        distances[i] = edit_distance_recursive_cached(word, vocabulary[i], replacement_cost=replacement_cost)
+    mn = max(min(distances), min_distance)
+    
+    suggestions = [vocabulary[i] for i in range(len(vocabulary)) if distances[i] <= mn and condition(word, vocabulary[i])]
+    return suggestions
 
 #####################################################################################
 
@@ -133,6 +152,7 @@ def edit_distance_recursive_cached(s1, s2, replacement_cost=2):
 def main():
     import time
     
+    # Levenshtein distance
     s1,s2 = make_strings(maxlen=5)
     
     replacement_cost = 2
@@ -156,6 +176,17 @@ def main():
     print(s1,s2, d4, [round(n,5) for n in   (t1,t2,t3,t4)])
     assert d1==d2==d3==d4
     
+    
+    # Spellchecking suggestions
+    import os
+    PATH = os.path.expanduser("~/Datasets/1000_common_english_words.txt")
+    with open(PATH, mode='rt', encoding='utf-8') as fr:
+        vocabulary = fr.read().split('\n')
+    
+    words = ("pahe", "peeple", "piepl", "wurld", "gurl", "feind", "pleys", "litl", "recieve", "good")
+    
+    for word in words:
+        print(word, get_suggestions(word, vocabulary))
+    
 if __name__ == "__main__": main()
-
 
