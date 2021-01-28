@@ -155,6 +155,15 @@ def get_suggestions(word, vocabulary=None, min_distance=1, replacement_cost = 1)
     suggestions = [vocabulary[i] for i in range(len(vocabulary)) if distances[i] <= mn and condition(word, vocabulary[i])]
     return suggestions
 
+
+
+
+def n_grams_ratio(s1, s2, n=2):
+    s1, s2 = (str(s).strip().lower() for s in (s1,s2))
+    S1, S2 = (frozenset(s[i:i+n] for i in range(len(s)-1)) for s in (s1, s2))
+    return len(S1.intersection(S2)) / len(S1.union(S2))
+
+
 #####################################################################################
 
 
@@ -190,7 +199,8 @@ def main():
     r = similarity_ratio(s1, s2)
     print(s1, s2, r)
     
-    
+
+
     # Spellchecking suggestions
     import os
     PATH = os.path.expanduser("~/Datasets/1000_common_english_words.txt")
@@ -201,6 +211,24 @@ def main():
     
     for word in words:
         print(word, get_suggestions(word, vocabulary))
+        
+
+
+    # Use Levenshtein distance in this case
+    s = s1 = "California"
+    options = ("CA", "DC", "KA", "AC", "NV")
+    
+    for s2 in options:
+        r = similarity_ratio(s1, s2)
+        print(s2, r)
+    
+    # Use N-Grams in this case:
+    s = s1 = "Double Bedroom"
+    options = ("Bedroom Double", "Double Room", "King bedroom", "Double bed room", "Room with a double bed")
+    
+    for s2 in options:
+        r = n_grams_ratio(s1, s2, n=2)
+        print(s2, r)
     
 if __name__ == "__main__": main()
 
